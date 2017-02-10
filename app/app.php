@@ -4,62 +4,28 @@
   require_once __DIR__."/../src/Task.php";
 
   $app = new Silex\Application();
+  $app->register(new Silex\Provider\TwigServiceProvider(), array(
+    'twig.path' => __DIR__.'/../views'
+  ));
 
   session_start();
   if(empty($_SESSION['list_of_tasks'])) {
     $_SESSION['list_of_tasks'] = array();
   }
 
-  $app->get("/", function() {
-    $output = "";
-    $all_tasks = Task::getAll();
-
-    if(!empty($all_tasks)) {
-      $output = $output . "
-        <h1>To Do List</h1>
-        <p><strong>Here are all your tasks:</strong></p>
-      ";
-
-      foreach(Task::getAll() as $task) {
-        $output = $output . "<li>" . $task->getDescription() ."</li>";
-      }
-    }
-
-    $output = $output . "
-      <h2>Add a Task:</h2>
-      <form action='/tasks' method='post'>
-        <label for='description'>Task Description</label>
-        <input id='description' name='description' type='text'>
-        <button type='submit'>Add Task</button>
-      </form>
-    ";
-
-    $output .= "
-      <form action='/delete_tasks' method='post'>
-        <button type='submit'>delete</button>
-      </form>
-    ";
-
-    return $output;
+  $app->get("/", function() use($app) {
+    return $app['twig']->render('tasks.html.twig', array('tasks' => Task::getAll()));
   });
 
-  $app->post("/delete_tasks", function() {
+  $app->post("/delete_tasks", function() use($app) {
     Task::deleteAll();
-
-    return "
-      <h1>List Cleared!</h1>
-      <p><a href='/'>Home</a></p>
-    ";
+    return $app['twig']->render('delete_tasks.html.twig');
   });
 
-  $app->post("/tasks", function() {
+  $app->post("/tasks", function() use($app) {
     $task = new Task($_POST['description']);
     $task->save();
-    return "
-      <h1>You created a task!</h1>
-      <p>" . $task->getDescription() . "</p>
-      <p><a href='/'>View your list of things to do.</a></p>
-    ";
+    return $app['twig']->render('clear_tasks.html.twig', array('newTask' => $task));
   });
 
   return $app;
